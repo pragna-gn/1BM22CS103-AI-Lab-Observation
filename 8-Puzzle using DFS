@@ -1,0 +1,95 @@
+#using DFS
+
+from collections import deque
+
+# Function to check if a state is solvable
+def is_solvable(state):
+    inv_count = 0
+    flat_state = [num for row in state for num in row if num != 0]
+    for i in range(len(flat_state) - 1):
+        for j in range(i + 1, len(flat_state)):
+            if flat_state[i] > flat_state[j]:
+                inv_count += 1
+    return inv_count % 2 == 0
+
+# Function to check if the goal state is reached
+def is_goal(state, goal_state):
+    return state == goal_state
+
+# Function to get the position of the blank tile (0)
+def find_blank(state):
+    for i in range(len(state)):
+        for j in range(len(state[i])):
+            if state[i][j] == 0:
+                return i, j
+
+# Function to generate possible moves from the current state
+def get_neighbors(state):
+    neighbors = []
+    x, y = find_blank(state)
+    moves = [(0, 1), (0, -1), (1, 0), (-1, 0)]  # right, left, down, up
+
+    for dx, dy in moves:
+        nx, ny = x + dx, y + dy
+        if 0 <= nx < len(state) and 0 <= ny < len(state[0]):
+            new_state = [row[:] for row in state]
+            new_state[x][y], new_state[nx][ny] = new_state[nx][ny], new_state[x][y]
+            neighbors.append(new_state)
+    return neighbors
+
+# DFS to solve the 8-puzzle problem
+def dfs(start_state, goal_state):
+    if not is_solvable(start_state):
+        return "The puzzle is unsolvable."
+
+    stack = [(start_state, [])]  # stack to hold states for DFS
+    visited = set()
+
+    while stack:
+        current_state, path = stack.pop()
+
+        if is_goal(current_state, goal_state):
+            return path
+
+        visited.add(tuple(map(tuple, current_state)))
+
+        for neighbor in get_neighbors(current_state):
+            if tuple(map(tuple, neighbor)) not in visited:
+                stack.append((neighbor, path + [neighbor]))
+
+    return "No solution found."
+
+# Helper function to print the state
+def print_state(state):
+    for row in state:
+        print(row)
+    print()
+
+# Function to take user input and create the 8-puzzle state
+def get_puzzle_input():
+    print("Enter the initial state (enter 3 numbers for each row, separated by spaces):")
+    state = []
+    for i in range(3):
+        row = list(map(int, input(f"Row {i + 1}: ").split()))
+        state.append(row)
+    return state
+
+# Hardcoded goal state
+goal_state = [
+    [1, 2, 3],
+    [4, 5, 6],
+    [7, 8, 0]
+]
+
+# Get user input for the initial state
+initial_state = get_puzzle_input()
+
+# Solve the puzzle
+solution = dfs(initial_state, goal_state)
+
+if isinstance(solution, str):
+    print(solution)
+else:
+    print("Solution found in", len(solution), "steps:")
+    for step in solution:
+        print_state(step)
