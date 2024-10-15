@@ -1,0 +1,101 @@
+import heapq
+
+class PuzzleState:
+    def __init__(self, board, zero_pos, moves=0, previous=None, goal=None):
+        self.board = board
+        self.zero_pos = zero_pos
+        self.moves = moves
+        self.previous = previous  # Store the previous state to trace back
+        self.goal = goal  # Goal state
+
+    def get_possible_moves(self):
+        x, y = self.zero_pos
+        moves = []
+        if x > 0: moves.append((x - 1, y))  # Up
+        if x < 2: moves.append((x + 1, y))  # Down
+        if y > 0: moves.append((x, y - 1))  # Left
+        if y < 2: moves.append((x, y + 1))  # Right
+        return moves
+
+    def make_move(self, new_zero_pos):
+        x, y = self.zero_pos
+        new_x, new_y = new_zero_pos
+        new_board = [row[:] for row in self.board]
+        new_board[x][y], new_board[new_x][new_y] = new_board[new_x][new_y], new_board[x][y]
+        return PuzzleState(new_board, new_zero_pos, self.moves + 1, self, self.goal)
+
+    def is_goal(self):
+        return self.board == self.goal
+
+    def __lt__(self, other):
+        # Use Manhattan distance for comparison
+        return (self.moves + self.manhattan_distance()) < (other.moves + other.manhattan_distance())
+
+    def manhattan_distance(self):
+        # Goal positions for tiles 1-8
+        goal_positions = {
+            1: (0, 0), 2: (0, 1), 3: (0, 2), 
+            4: (1, 0), 5: (1, 1), 6: (1, 2), 
+            7: (2, 0), 8: (2, 1)
+        }
+        distance = 0
+        for i in range(3):
+            for j in range(3):
+                value = self.board[i][j]
+                if value != 0:  # Skip the empty space
+                    goal_x, goal_y = goal_positions[value]
+                    distance += abs(goal_x - i) + abs(goal_y - j)
+        return distance
+
+def a_star_manhattan(start_board, goal_board):
+    zero_pos = next((i, j) for i in range(3) for j in range(3) if start_board[i][j] == 0)
+    start_state = PuzzleState(start_board, zero_pos, goal=goal_board)  # Pass goal to the start state
+
+    priority_queue = []
+    heapq.heappush(priority_queue, start_state)
+    visited = set()
+
+    while priority_queue:
+        current_state = heapq.heappop(priority_queue)
+
+        if current_state.is_goal():
+            return current_state  # Return the state that reached the goal
+
+        visited.add(tuple(map(tuple, current_state.board)))
+        print(f"Exploring (Manhattan Distance): {current_state.board} with distance {current_state.manhattan_distance()}.")
+
+        for move in current_state.get_possible_moves():
+            new_state = current_state.make_move(move)
+
+            if tuple(map(tuple, new_state.board)) not in visited:
+                heapq.heappush(priority_queue, new_state)
+
+    return None  # No solution found
+
+def print_solution(solution):
+    path = []
+    while solution:
+        path.append(solution.board)
+        solution = solution.previous
+    for step in reversed(path):
+        for row in step:
+            print(row)
+        print()
+
+# User input for initial and goal state
+def get_board_input(prompt):
+    print(prompt)
+    return [list(map(int, input().split())) for _ in range(3)]
+
+# Main execution
+if __name__ == "__main__":
+    initial_board = get_board_input("Enter the initial state (3 rows of 3 numbers each, use 0 for empty):")
+    goal_board = get_board_input("Enter the goal state (3 rows of 3 numbers each):")
+
+    solution = a_star_manhattan(initial_board, goal_board)
+
+    if solution:
+        print("Solution found in", solution.moves, "moves:")
+        print_solution(solution)
+    else:
+        print("No solution found.")
